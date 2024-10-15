@@ -2,62 +2,14 @@ import { $, $$, uid } from './lib.js';
 
 const TodoStates = {
   completed: 'completed',
-  editing: 'editing',
   active: 'active',
 }
 
-class TodoState {
-  type;
-  constructor(todo) {
-    this.todo = todo;
-  }
-  render() {};
-}
-
-class CompletedState extends TodoState {
-  type = TodoStates.completed;
-  render() {
-    return `<li class="completed" data-id="${this.todo.id}">
-            <div class="view">
-              <input class="toggle" type="checkbox" checked />
-              <label>${this.todo.name}</label>
-              <button class="destroy"></button>
-            </div>
-          </li>`;
-  }
-}
-class EditingState extends TodoState {
-  type = TodoStates.editing;
-  render() {
-    return `<li class="editing" data-id="${this.todo.id}">
-            <div class="view">
-              <input class="toggle" type="checkbox" ${this.todo.prevState.type === TodoStates.completed ? 'checked' : ''} />
-              <label>${this.todo.name}</label>
-              <button class="destroy"></button>
-            </div>
-            <input class="edit" type="text" value="${this.todo.name}" />
-          </li>`;
-  }
-}
-class ActiveState extends TodoState {
-  type = TodoStates.active;
-  render() {
-    return `<li data-id="${this.todo.id}">
-            <div class="view">
-              <input class="toggle" type="checkbox" />
-              <label>${this.todo.name}</label>
-              <button class="destroy"></button>
-            </div>
-          </li>`;
-  }
-}
-
-
 class Todo {
-  constructor({ id = uid(), state = new ActiveState(this), prevState = new ActiveState(this), name, }) {
+  constructor({ id = uid(), state = TodoStates.active, isEditing = false, name, }) {
     this.id = id;
     this.state = state;
-    this.prevState = prevState;
+    this.isEditing = isEditing;
     this.name = name;
   }
   setState(state) {
@@ -65,7 +17,15 @@ class Todo {
     this.state = state;
   }
   render() {
-    return this.state.render();
+    const className = this.isEditing ? 'editing' : this.state;
+    return `<li class="${className}" data-id="${this.id}">
+              <div class="view">
+                <input class="toggle" type="checkbox" ${this.state === TodoStates.completed ? 'checked' : ''} />
+                <label>${this.name}</label>
+                <button class="destroy"></button>
+              </div>
+              ${this.isEditing ? `<input class="edit" type="text" value="${this.name}" />` : ''}
+            </li>`;
   }
 } 
 
@@ -81,8 +41,8 @@ class App {
   }
 
   renderTodos() {
-    console.log('rendered');
     $('.todo-list').innerHTML = this.todos.reduce((html, todo) => html += todo.render(), '');
+    console.log($('.todo-list').innerHTML);
   }
 
   setEvents() {
@@ -101,7 +61,7 @@ class App {
         const todoId = +target.closest('li').dataset.id;
         const todo = this.todos.find((({ id }) => id === todoId));
         todo.setState(
-          target.checked ? new CompletedState(todo) : new ActiveState(todo)
+          target.checked ? TodoStates.completed : TodoStates.active
         );
         return this.renderTodos();
       }
@@ -119,18 +79,14 @@ class App {
       if (target.closest('.view')) {
         const todoId = +target.closest('li').dataset.id;
         const todo = this.todos.find((({ id }) => id === todoId));
-        todo.setState(
-          new EditingState(todo)
-        );
+        todo.isEditing = true;
 
         this.renderTodos();
 
         const $editInput = $('.edit');
         $editInput.onblur = () => {
           todo.name = $editInput.value;
-          todo.setState(
-            todo.prevState
-          );
+          todo.isEditing = false;
           return this.renderTodos();
         }
       }
