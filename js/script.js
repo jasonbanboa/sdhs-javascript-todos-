@@ -1,5 +1,8 @@
 import { $, $$, uid } from './lib.js';
 
+// NOTE maybe add strategy or state?idk for filtering todos
+// NEED to reread 
+
 const TodoStates = {
   completed: 'completed',
   active: 'active',
